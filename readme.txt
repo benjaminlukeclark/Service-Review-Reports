@@ -35,6 +35,11 @@ Then run to generate the config.xml file:
 .\configSetup.ps1
 ```
 
+Then update the top of serviceDeliveryReports and/or ServiceReportTransfer to point to the config file
+
+```PowerShell
+$config = ([xml](Get-Content "YOUR XML HERE")).root
+
 ## Usage
 
 When run manually this will create, in the specified remote root, the following folder structure:
