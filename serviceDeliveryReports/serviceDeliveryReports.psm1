@@ -1,5 +1,5 @@
 ﻿##### EXPOSED FUNCTIONS #####
-$config = ([xml](Get-Content "GLADOS")).root
+$config = ([xml](Get-Content "C:\Expo\ServiceReviewReports\config.xml")).root
 
 # Function to update log file
 function updateLogs() {
@@ -63,7 +63,7 @@ param(
     # Then write to log file if we created the folder
     if ($CheckFolderResults -eq 1) {
 
-        updateLogs -Message "$ClientName folder created" -Level "TRACE"
+        updateLogs -Message "$Year \ $ClientName folder created" -Level "TRACE"
 
     }
 
@@ -87,7 +87,39 @@ param(
     # Then write to log file if we created the folder
     if ($CheckFolderResults -eq 1) {
 
-        updateLogs -Message "$Day folder created" -Level "TRACE"
+        updateLogs -Message "$Year \ $ClientName \ $Day folder created" -Level "TRACE"
+
+    }
+
+
+}
+
+# function to move file
+function moveReport() {
+param(
+[parameter(mandatory=$true)][string]$ClientName,
+[parameter(mandatory=$true)][string]$Year,
+[parameter(mandatory=$true)][string]$Day,
+[parameter(mandatory=$true)][string]$FilePath,
+[parameter(mandatory=$true)][string]$FileName
+)
+
+    # Work out destination
+    $Destination = $config.remoteRoot + "\" + $Year + "\" + $ClientName + "\" + $Day + "\" + $FileName
+
+    # Try the move
+    Move-Item -Path $FilePath -Destination $Destination | Out-Null
+
+    # Test if successful
+    $MoveTest = Test-Path -Path $Destination
+
+    if ($MoveTest -eq $false) {
+
+         updateLogs -Message "$ClientName \ $FileName unable to be moved to remote destination" -Level "ERROR"
+
+    } else {
+
+        updateLogs -Message "$ClientName \ $FileName successfully moved to remote" -Level "INFO"
 
     }
 
@@ -113,7 +145,6 @@ function createFolder() {
 param(
 [parameter(mandatory=$true)][string]$Route
 )
-
     # Check if folder exists
     $FolderCheck = Test-Path -Path $Route
 

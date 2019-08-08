@@ -23,8 +23,28 @@ foreach ($Pack in $MonthlyPacks) {
     createDayFolder -ClientName $ClientName -Year $CurrentDay.Year -Day ([string]::Format("{1}-{0}",$dayFolderNum, $monthFolderNum))
 
 
+    # Get all subfolders
     $SubFolders = Get-ChildItem -Path $Pack.PSPath -Directory
-    $Files = $SubFolders[0] | Get-ChildItem -File | Where {($_.CreationTime -gt (Get-Date).Date) -and ($_.CreationTime -lt (Get-Date).Date.AddDays(1))}
+    # If we find subfolders then...
+    if ($SubFolders -ne $null) {
+        # Try to find all files made today
+        $Files = $SubFolders[0] | Get-ChildItem -File | Where {($_.CreationTime -gt (Get-Date).Date) -and ($_.CreationTime -lt (Get-Date).Date.AddDays(1)) -and ($_.Name -ne ".folder")}
+        # If we didn't find any then output to the log
+        if (($Files -eq $null)) {
+            updateLogs -Message "Unable to find files for transfer under $ClientName" -Level "INFO"
+        } else { #Otherwise we enumerate through all files made today and move them
+
+            # Enumerate through all files made today
+            foreach ($File in $Files) {
+            # And move them
+                moveReport -ClientName $ClientName -Year $CurrentDay.Year -Day ([string]::Format("{1}-{0}",$dayFolderNum, $monthFolderNum)) -FilePath $File.FullName -FileName $File.Name
+            }
+        }
+
+    } else { # If unable to find any folders
+        # Then update log
+        updateLogs -Message "Unable to find subfolders under $ClientName" -Level "ERROR"
+    }
 
 
 }
