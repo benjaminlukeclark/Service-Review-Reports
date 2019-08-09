@@ -19,8 +19,7 @@ foreach ($Pack in $MonthlyPacks) {
     # And then the day folder if it does not exist. First we check to see if day/month is under 10 and if so append a leading 0
     if ([int]$CurrentDay.Day -lt 10) {$dayFolderNum = "0" + $CurrentDay.Day} else {$dayFolderNum = $CurrentDay.Day}
     if ([int]$CurrentDay.Month -lt 10) {$monthFolderNum = "0" + $CurrentDay.Month} else {$monthFolderNum = $CurrentDay.Month}
-    # create day folder in format of month-day
-    createDayFolder -ClientName $ClientName -Year $CurrentDay.Year -Day ([string]::Format("{1}-{0}",$dayFolderNum, $monthFolderNum))
+
 
 
     # Get all subfolders
@@ -33,7 +32,10 @@ foreach ($Pack in $MonthlyPacks) {
         if (($Files -eq $null)) {
             updateLogs -Message "Unable to find files for transfer under $ClientName" -Level "INFO"
         } else { #Otherwise we enumerate through all files made today and move them
-
+            # Update logs
+            updateLogs -Message "Found " + $Files.count + " files under $ClientName to transfer" -Level "INFO"
+            # create day folder in format of month-day - only do if this there are files to upload
+            createDayFolder -ClientName $ClientName -Year $CurrentDay.Year -Day ([string]::Format("{1}-{0}",$dayFolderNum, $monthFolderNum))
             # Enumerate through all files made today
             foreach ($File in $Files) {
             # And move them
