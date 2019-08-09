@@ -1,5 +1,5 @@
 ﻿##### EXPOSED FUNCTIONS #####
-$config = ([xml](Get-Content "C:\Expo\ServiceReviewReports\config.xml")).root
+$config = ([xml](Get-Content "CAKE")).root
 
 # Function to update log file
 function updateLogs() {
@@ -100,15 +100,17 @@ param(
 [parameter(mandatory=$true)][string]$ClientName,
 [parameter(mandatory=$true)][string]$Year,
 [parameter(mandatory=$true)][string]$Day,
-[parameter(mandatory=$true)][string]$FilePath,
-[parameter(mandatory=$true)][string]$FileName
+[parameter(mandatory=$true)][string]$NewFileName,
+[parameter(mandatory=$True)][System.IO.FileInfo]$OriginalFile
 )
 
+    $File | Rename-Item -NewName $NewFileName
+    
     # Work out destination
-    $Destination = $config.remoteRoot + "\" + $Year + "\" + $ClientName + "\" + $Day + "\" + $FileName
+    $Destination = $config.remoteRoot + "\" + $Year + "\" + $ClientName + "\" + $Day + "\"
 
     # Try the move
-    Move-Item -Path $FilePath -Destination $Destination | Out-Null
+    Move-Item -Path ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) -Destination ($Destination + $NewFileName)
 
     # Test if successful
     $MoveTest = Test-Path -Path $Destination
@@ -125,6 +127,46 @@ param(
 
 
 }
+
+
+# function to return a reformatted file name
+function returnFormattedFileName() {
+param(
+[parameter(mandatory=$True)][System.IO.FileInfo]$OriginalFile
+)
+    # Get the original file name
+    $OriginalFileName = $OriginalFile.Name
+
+        # Patch Compliance
+        if ($OriginalFileName -like "*Patch Compliance*") {
+
+            return ("Patch Compliance" + $OriginalFile.Extension)
+        }
+
+        if ($OriginalFileName -like "*Software List*") {
+
+            return ("Software List" + $OriginalFile.Extension)
+        }
+
+        if ($OriginalFileName -like "*Anti Virus*") {
+
+            return ("Anti Virus Health" + $OriginalFile.Extension)
+        }
+
+        if ($OriginalFileName -like "*Computer Audit*") {
+
+            return ("Computer Audit" + $OriginalFile.Extension)
+        }
+
+        if ($OriginalFileName -like "*Performance Review*") {
+
+            return ("Performance Review" + $OriginalFile.Extension)
+        }
+
+        return $OriginalFileName
+}
+
+
 
 ##### HIDDEN FUNCTIONS #####
 

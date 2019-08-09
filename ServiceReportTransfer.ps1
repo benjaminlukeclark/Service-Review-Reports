@@ -33,13 +33,15 @@ foreach ($Pack in $MonthlyPacks) {
             updateLogs -Message "Unable to find files for transfer under $ClientName" -Level "INFO"
         } else { #Otherwise we enumerate through all files made today and move them
             # Update logs
-            updateLogs -Message "Found " + $Files.count + " files under $ClientName to transfer" -Level "INFO"
+            updateLogs -Message ("Found " + $Files.count + " files under $ClientName to transfer") -Level "INFO"
             # create day folder in format of month-day - only do if this there are files to upload
             createDayFolder -ClientName $ClientName -Year $CurrentDay.Year -Day ([string]::Format("{1}-{0}",$dayFolderNum, $monthFolderNum))
             # Enumerate through all files made today
             foreach ($File in $Files) {
             # And move them
-                moveReport -ClientName $ClientName -Year $CurrentDay.Year -Day ([string]::Format("{1}-{0}",$dayFolderNum, $monthFolderNum)) -FilePath $File.FullName -FileName $File.Name
+                moveReport -ClientName $ClientName -Year $CurrentDay.Year -Day ([string]::Format("{1}-{0}",$dayFolderNum, $monthFolderNum)) `
+                -NewFileName (returnFormattedFileName -OriginalFile $File) -OriginalFile $File
+                
             }
         }
 
