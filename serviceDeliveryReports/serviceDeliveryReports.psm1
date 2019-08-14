@@ -117,11 +117,11 @@ param(
 
     if ($MoveTest -eq $false) {
 
-         updateLogs -Message "$ClientName \ $FileName unable to be moved to remote destination" -Level "ERROR"
+         updateLogs -Message "$ClientName \ $NewFileName unable to be moved to remote destination" -Level "ERROR"
 
     } else {
 
-        updateLogs -Message "$ClientName \ $FileName successfully moved to remote" -Level "INFO"
+        updateLogs -Message "$ClientName \ $NewFileName successfully moved to remote" -Level "INFO"
 
     }
 
