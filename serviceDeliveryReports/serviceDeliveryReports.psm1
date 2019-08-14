@@ -1,5 +1,6 @@
 ﻿##### EXPOSED FUNCTIONS #####
-$config = ([xml](Get-Content "CAKE")).root
+$config = ([xml](Get-Content "OH NO")).root
+$config.SetAttribute("Failures","0")
 
 # Function to update log file
 function updateLogs() {
@@ -104,13 +105,66 @@ param(
 [parameter(mandatory=$True)][System.IO.FileInfo]$OriginalFile
 )
 
-    $File | Rename-Item -NewName $NewFileName
+    try {
+        
+        # Try the rename
+        $File | Rename-Item -NewName $NewFileName -ErrorAction Stop
+
+    } catch [System.IO.IOException] {
+        
+        # Catch IO exception
+        # Write to logs
+        updateLogs -Message ("Error while trying to move " + ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) + " :" + $Error[0].Exception) -Level "ERROR"
+        # Attempt a second rename
+        try {
+
+            $NewFileName = $NewFileName.Replace($OriginalFile.Extension.ToString(),[string]::Format("-{0}{1}",(get-date).TimeOfDay.ToString().Replace(".","").Substring(0,8).Replace(":","-"),$OriginalFile.Extension))
+            $File | Rename-Item -NewName $NewFileName -ErrorAction Stop
+
+        } catch {
+
+            updateLogs -Message ("Second rename failed: " + $Error[0].Exception + " aborting move") -Level "ERROR"
+
+        }
+
+
+    } catch { # Catch unexpected exception
+
+        updateLogs -Message ("Error while trying to move " + ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) + " :" + $Error[0].Exception) -Level "ERROR"
+    }
     
     # Work out destination
     $Destination = $config.remoteRoot + "\" + $Year + "\" + $ClientName + "\" + $Day + "\"
+    
+    try {
 
-    # Try the move
-    Move-Item -Path ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) -Destination ($Destination + $NewFileName)
+        # Try to move the item
+        Move-Item -Path ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) -Destination ($Destination + $NewFileName) -ErrorAction Stop
+
+    } catch [System.IO.IOException] {
+        
+        # Catch IO exception
+        # Write to logs
+        updateLogs -Message ("Error while trying to move " + ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) + " :" + $Error[0].Exception) -Level "ERROR"
+        # Attempt a second rename
+        try {
+
+            $File | Rename-Item -NewName $NewFileName.Replace($OriginalFile.Extension.ToString(),[string]::Format("-{0}{1}",(get-date).TimeOfDay.ToString().Replace(".","").Substring(0,8).Replace(":","-"),$OriginalFile.Extension))
+
+        } catch {
+
+            updateLogs -Message ("Second rename failed: " + $Error[0].Exception + " aborting move") -Level "ERROR"
+
+        }
+
+
+    } catch { # Catch unexpected exception
+
+        updateLogs -Message ("Error while trying to move " + ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) + " :" + $Error[0].Exception) -Level "ERROR"
+        # Increment failure count
+        $config.SetAttribute("Failures",([int]$Config.Failures + 1))
+    }
+
 
     # Test if successful
     $MoveTest = Test-Path -Path $Destination
@@ -137,33 +191,11 @@ param(
     # Get the original file name
     $OriginalFileName = $OriginalFile.Name
 
-        # Patch Compliance
-        if ($OriginalFileName -like "*Patch Compliance*") {
 
-            return ("Patch Compliance" + $OriginalFile.Extension)
-        }
-
-        if ($OriginalFileName -like "*Software List*") {
-
-            return ("Software List" + $OriginalFile.Extension)
-        }
-
-        if ($OriginalFileName -like "*Anti Virus*") {
-
-            return ("Anti Virus Health" + $OriginalFile.Extension)
-        }
-
-        if ($OriginalFileName -like "*Computer Audit*") {
-
-            return ("Computer Audit" + $OriginalFile.Extension)
-        }
-
-        if ($OriginalFileName -like "*Performance Review*") {
-
-            return ("Performance Review" + $OriginalFile.Extension)
-        }
-
-        return $OriginalFileName
+    # Try to match junk at the start
+    $Pattern = '.* - '
+    $NewName = $OriginalFileName -replace $Pattern,""
+    return $NewName
 }
 
 

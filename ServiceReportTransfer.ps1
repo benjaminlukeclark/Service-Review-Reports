@@ -1,5 +1,6 @@
 ﻿$config = ([xml](Get-Content config.xml)).root
 Import-Module $config.modulePath
+$config.SetAttribute("Failures","0")
 
 # Get all the monthly packs that we need
 $MonthlyPacks = Get-ChildItem -Path $config.reportRoot| Where Name -like "*Monthly*"
@@ -50,5 +51,21 @@ foreach ($Pack in $MonthlyPacks) {
         updateLogs -Message "Unable to find subfolders under $ClientName" -Level "ERROR"
     }
 
+
+}
+
+
+# Finally, check if any files failed to move
+if ([int]$config.Failures -gt 0) {
+
+    # Check if event source already exists
+    $Exists = [System.Diagnostics.EventLog]::SourceExists("ServiceReportTransfer")
+    if ($Exists -eq $False) {
+        New-EventLog -LogName "Application" -Source "ServiceReportTransfer"
+
+    }
+    
+    Write-EventLog -LogName Application -Source "ServiceReportTransfer" -EventId 401 `
+    -EntryType Error -Message "One or more service reports failed to transfer successfully to the K drive."
 
 }
