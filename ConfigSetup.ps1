@@ -5,5 +5,6 @@
     <replaceCriteria>HUGE SUCCESS</replaceCriteria>
     <installRoot>IT'S HARD TO OVERSTATE</installRoot>
     <remoteRoot>MY SATISFACTION</remoteRoot>
+    <failures>0</failures>
 </root>
 '@ | Out-File config.xml

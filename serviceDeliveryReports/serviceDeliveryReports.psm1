@@ -1,5 +1,8 @@
 ﻿##### EXPOSED FUNCTIONS #####
-$config = ([xml](Get-Content "C:\Expo\ServiceReviewReports\config.xml")).root
+# Import config with all of our settings
+$ConfigFileLocation = "OH NO"
+$configFile = ([xml](Get-Content $ConfigFileLocation))
+$config = $configFile.Root
 
 # Function to update log file
 function updateLogs() {
@@ -100,31 +103,112 @@ param(
 [parameter(mandatory=$true)][string]$ClientName,
 [parameter(mandatory=$true)][string]$Year,
 [parameter(mandatory=$true)][string]$Day,
-[parameter(mandatory=$true)][string]$FilePath,
-[parameter(mandatory=$true)][string]$FileName
+[parameter(mandatory=$true)][string]$NewFileName,
+[parameter(mandatory=$True)][System.IO.FileInfo]$OriginalFile
 )
 
-    # Work out destination
-    $Destination = $config.remoteRoot + "\" + $Year + "\" + $ClientName + "\" + $Day + "\" + $FileName
+    try {
+        
+        # Try the rename
+        $File | Rename-Item -NewName $NewFileName -ErrorAction Stop
 
-    # Try the move
-    Move-Item -Path $FilePath -Destination $Destination | Out-Null
+    } catch [System.IO.IOException] {
+        
+        # Catch IO exception
+        # Write to logs
+        updateLogs -Message ("Error while trying to move " + ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) + " :" + $Error[0].Exception) -Level "ERROR"
+        # Attempt a second rename
+        try {
+
+            $NewFileName = $NewFileName.Replace($OriginalFile.Extension.ToString(),[string]::Format("-{0}{1}",(get-date).TimeOfDay.ToString().Replace(".","").Substring(0,8).Replace(":","-"),$OriginalFile.Extension))
+            $File | Rename-Item -NewName $NewFileName -ErrorAction Stop
+
+        } catch {
+
+            updateLogs -Message ("Second rename failed: " + $Error[0].Exception + " aborting move") -Level "ERROR"
+
+        }
+
+
+    } catch { # Catch unexpected exception
+
+        updateLogs -Message ("Error while trying to move " + ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) + " :" + $Error[0].Exception) -Level "ERROR"
+    }
+    
+    # Work out destination
+    $Destination = $config.remoteRoot + "\" + $Year + "\" + $ClientName + "\" + $Day + "\"
+    
+    try {
+
+        # Try to move the item
+        Move-Item -Path ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) -Destination ($Destination + $NewFileName) -ErrorAction Stop
+
+    } catch [System.IO.IOException] {
+        
+        # Catch IO exception
+        # Write to logs
+        updateLogs -Message ("Error while trying to move " + ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) + " :" + $Error[0].Exception) -Level "ERROR"
+        # Attempt a second rename
+        try {
+
+            $NewFileName = $NewFileName.Replace($OriginalFile.Extension.ToString(),[string]::Format("-{0}{1}",(get-date).TimeOfDay.ToString().Replace(".","").Substring(0,8).Replace(":","-"),$OriginalFile.Extension))
+            $File | Rename-Item -NewName $NewFileName -ErrorAction Stop
+            # Try to move the item
+            Move-Item -Path ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) -Destination ($Destination + $NewFileName) -ErrorAction Stop
+
+
+        } catch {
+
+            updateLogs -Message ("Second rename and move failed: " + $Error[0].Exception + " aborting move") -Level "ERROR"
+            # Increment failure count
+            $config.failures = [string]([int]$Config.failures + 1)
+            $ConfigFile.Save($ConfigFileLocation)
+
+        }
+
+
+    } catch { # Catch unexpected exception
+
+        updateLogs -Message ("Error while trying to move " + ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) + " :" + $Error[0].Exception) -Level "ERROR"
+        # Increment failure count
+        $config.failures = [string]([int]$Config.failures + 1)
+        $ConfigFile.Save($ConfigFileLocation)
+    }
+
 
     # Test if successful
-    $MoveTest = Test-Path -Path $Destination
+    $MoveTest = Test-Path -Path ($Destination + $NewFileName)
 
     if ($MoveTest -eq $false) {
 
-         updateLogs -Message "$ClientName \ $FileName unable to be moved to remote destination" -Level "ERROR"
+         updateLogs -Message "$ClientName \ $NewFileName unable to be moved to remote destination" -Level "ERROR"
 
     } else {
 
-        updateLogs -Message "$ClientName \ $FileName successfully moved to remote" -Level "INFO"
+        updateLogs -Message "$ClientName \ $NewFileName successfully moved to remote" -Level "INFO"
 
     }
 
 
 }
+
+
+# function to return a reformatted file name
+function returnFormattedFileName() {
+param(
+[parameter(mandatory=$True)][System.IO.FileInfo]$OriginalFile
+)
+    # Get the original file name
+    $OriginalFileName = $OriginalFile.Name
+
+
+    # Try to match junk at the start
+    $Pattern = '.* - '
+    $NewName = $OriginalFileName -replace $Pattern,""
+    return $NewName
+}
+
+
 
 ##### HIDDEN FUNCTIONS #####
 
