@@ -1,6 +1,8 @@
 ﻿##### EXPOSED FUNCTIONS #####
-$config = ([xml](Get-Content "OH NO")).root
-$config.SetAttribute("Failures","0")
+# Import config with all of our settings
+$ConfigFileLocation = "OH NO"
+$configFile = ([xml](Get-Content $ConfigFileLocation))
+$config = $configFile.Root
 
 # Function to update log file
 function updateLogs() {
@@ -158,6 +160,9 @@ param(
         } catch {
 
             updateLogs -Message ("Second rename and move failed: " + $Error[0].Exception + " aborting move") -Level "ERROR"
+            # Increment failure count
+            $config.failures = [string]([int]$Config.failures + 1)
+            $ConfigFile.Save($ConfigFileLocation)
 
         }
 
@@ -166,7 +171,8 @@ param(
 
         updateLogs -Message ("Error while trying to move " + ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) + " :" + $Error[0].Exception) -Level "ERROR"
         # Increment failure count
-        $config.SetAttribute("Failures",([int]$Config.Failures + 1))
+        $config.failures = [string]([int]$Config.failures + 1)
+        $ConfigFile.Save($ConfigFileLocation)
     }
 
 

@@ -29,16 +29,19 @@ Directory where you have cloned this to
 - Remote Root
 Directory where you want to upload files to
 
+- Failures
+Used to track failures in each run. Do not edit. Even if you do it'll get overwritten anyway.
+
 Then run to generate the config.xml file:
 
 ```PowerShell
 .\configSetup.ps1
 ```
 
-Then update the top of serviceDeliveryReports and/or ServiceReportTransfer to point to the config file
+Then update the top of serviceDeliveryReports and ServiceReportTransfer to point to the config file
 
 ```PowerShell
-$config = ([xml](Get-Content "YOUR XML HERE")).root
+$ConfigFileLocation = "OH NO"
 
 ## Usage
 
@@ -59,7 +62,11 @@ For example:
 
 If you want a regular transfer of files, the recommended approach is to setup a scheduled task running as a user with access to both remote and local. A good way to do this is to map the remote as a drive for that user, then make the scheduled task run in that user context.
 
-Log files are also created in a flat structure of dd-MM-yy under installRoot\Logs
+Log files are also created in a flat structure of dd-MM-yy under installRoot\Logs.
+
+If the file being copied exists locally or remotely the program attempts to rename it, and append -hh-mm-ss to the end to make it unique.
+
+It also uses regex to take out, what in our local instance, is an auto-generated timestamp to make the thing more readable.
 
 
 ## Contributing

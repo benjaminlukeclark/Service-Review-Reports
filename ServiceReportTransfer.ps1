@@ -1,6 +1,12 @@
-﻿$config = ([xml](Get-Content config.xml)).root
+﻿# Import config with all of our settings
+$ConfigFileLocation = "OH NO"
+$configFile = ([xml](Get-Content $ConfigFileLocation))
+$config = $configFile.Root
+# Import modules
 Import-Module $config.modulePath
-$config.SetAttribute("Failures","0")
+# Set initial failures to 0
+$config.failures = "0"
+$ConfigFile.Save($ConfigFileLocation)
 
 # Get all the monthly packs that we need
 $MonthlyPacks = Get-ChildItem -Path $config.reportRoot| Where Name -like "*Monthly*"
@@ -56,7 +62,7 @@ foreach ($Pack in $MonthlyPacks) {
 
 
 # Finally, check if any files failed to move
-if ([int]$config.Failures -gt 0) {
+if ([int]$config.failures -gt 0) {
 
     # Check if event source already exists
     $Exists = [System.Diagnostics.EventLog]::SourceExists("ServiceReportTransfer")
@@ -69,3 +75,7 @@ if ([int]$config.Failures -gt 0) {
     -EntryType Error -Message "One or more service reports failed to transfer successfully to the K drive."
 
 }
+
+# At the end set failures to 0 
+$config.failures = "0"
+$ConfigFile.Save($ConfigFileLocation)
