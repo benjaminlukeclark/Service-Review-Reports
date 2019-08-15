@@ -149,11 +149,15 @@ param(
         # Attempt a second rename
         try {
 
-            $File | Rename-Item -NewName $NewFileName.Replace($OriginalFile.Extension.ToString(),[string]::Format("-{0}{1}",(get-date).TimeOfDay.ToString().Replace(".","").Substring(0,8).Replace(":","-"),$OriginalFile.Extension))
+            $NewFileName = $NewFileName.Replace($OriginalFile.Extension.ToString(),[string]::Format("-{0}{1}",(get-date).TimeOfDay.ToString().Replace(".","").Substring(0,8).Replace(":","-"),$OriginalFile.Extension))
+            $File | Rename-Item -NewName $NewFileName -ErrorAction Stop
+            # Try to move the item
+            Move-Item -Path ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) -Destination ($Destination + $NewFileName) -ErrorAction Stop
+
 
         } catch {
 
-            updateLogs -Message ("Second rename failed: " + $Error[0].Exception + " aborting move") -Level "ERROR"
+            updateLogs -Message ("Second rename and move failed: " + $Error[0].Exception + " aborting move") -Level "ERROR"
 
         }
 
@@ -167,7 +171,7 @@ param(
 
 
     # Test if successful
-    $MoveTest = Test-Path -Path $Destination
+    $MoveTest = Test-Path -Path ($Destination + $NewFileName)
 
     if ($MoveTest -eq $false) {
 
