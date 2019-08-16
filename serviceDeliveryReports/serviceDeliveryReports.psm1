@@ -143,7 +143,7 @@ param(
     try {
 
         # Try to move the item
-        Move-Item -Path ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) -Destination ($Destination + $NewFileName) -ErrorAction Stop -Credential $Creds
+        Move-Item -Path ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) -Destination ($Destination + $NewFileName) -ErrorAction Stop
 
     } catch [System.IO.IOException] {
         
