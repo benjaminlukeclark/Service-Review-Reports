@@ -53,6 +53,10 @@ _Used to specify where you'll save remote credentials to. For more information o
 
 https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/export-clixml?view=powershell-6
 
+**tempDriveLetter**
+
+_Used to specify a temp drive letter. The creds provided will be used to temporarily make a drive with this letter to allow for the transfer. Sadly, even though the cmdlets used have a -credential param it doesn't work and this seems to be only way I could find to automate the process entirely._
+
 Then run to generate the config.xml file:
 
 ```PowerShell
