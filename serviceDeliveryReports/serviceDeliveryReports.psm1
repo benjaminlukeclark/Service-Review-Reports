@@ -1,6 +1,6 @@
 ﻿##### EXPOSED FUNCTIONS #####
 # Import config with all of our settings
-$ConfigFileLocation = "OH NO"
+$ConfigFileLocation = "YOUR PATH GOES HERE"
 $configFile = ([xml](Get-Content $ConfigFileLocation))
 $config = $configFile.Root
 
@@ -31,14 +31,12 @@ param(
 # Function to attempt create of year folder
 function createYearFolder() {
 param(
-[parameter(mandatory=$true)][string]$Year
+[parameter(mandatory=$true)][string]$Year,
+[parameter(mandatory=$true)][System.Management.Automation.PSCredential]$Creds
 )
-
-    # Get route
-    $Route = $config.remoteRoot + "\" + $Year
     
     # Encode check in a job to enable running as a different user
-    $CheckFolderResults = createFolder -Route $Route
+    $CheckFolderResults = createFolder -Route $Year -Creds $Creds
 
 
     # Then write to log file if we created the folder
@@ -54,14 +52,15 @@ param(
 function createClientFolder() {
 param(
 [parameter(mandatory=$true)][string]$ClientName,
-[parameter(mandatory=$true)][string]$Year
+[parameter(mandatory=$true)][string]$Year,
+[parameter(mandatory=$true)][System.Management.Automation.PSCredential]$Creds
 )
 
     # Get route
-    $Route = $config.remoteRoot + "\" + $Year + "\" + $ClientName
+    $Route = $Year + "\" + $ClientName
 
     # Get results
-    $CheckFolderResults = createFolder -Route $Route
+    $CheckFolderResults = createFolder -Route $Route -Creds $Creds
 
     # Then write to log file if we created the folder
     if ($CheckFolderResults -eq 1) {
@@ -77,15 +76,16 @@ function createDayFolder() {
 param(
 [parameter(mandatory=$true)][string]$ClientName,
 [parameter(mandatory=$true)][string]$Year,
-[parameter(mandatory=$true)][string]$Day
+[parameter(mandatory=$true)][string]$Day,
+[parameter(mandatory=$true)][System.Management.Automation.PSCredential]$Creds
 )
 
 
     # Get route
-    $Route = $config.remoteRoot + "\" + $Year + "\" + $ClientName + "\" + $Day
+    $Route = $Year + "\" + $ClientName + "\" + $Day
 
     # Get results
-    $CheckFolderResults = createFolder -Route $Route
+    $CheckFolderResults = createFolder -Route $Route -Creds $Creds
 
     # Then write to log file if we created the folder
     if ($CheckFolderResults -eq 1) {
@@ -104,7 +104,8 @@ param(
 [parameter(mandatory=$true)][string]$Year,
 [parameter(mandatory=$true)][string]$Day,
 [parameter(mandatory=$true)][string]$NewFileName,
-[parameter(mandatory=$True)][System.IO.FileInfo]$OriginalFile
+[parameter(mandatory=$True)][System.IO.FileInfo]$OriginalFile,
+[parameter(mandatory=$true)][System.Management.Automation.PSCredential]$Creds
 )
 
     try {
@@ -136,12 +137,13 @@ param(
     }
     
     # Work out destination
-    $Destination = $config.remoteRoot + "\" + $Year + "\" + $ClientName + "\" + $Day + "\"
+    New-PSDrive -Name $config.tempDriveLetter -PSProvider FileSystem -Root $config.remoteRoot -Credential $Creds
+    $Destination = $config.tempDriveLetter + ":" + "\" + $Year + "\" + $ClientName + "\" + $Day + "\"
     
     try {
 
         # Try to move the item
-        Move-Item -Path ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) -Destination ($Destination + $NewFileName) -ErrorAction Stop
+        Move-Item -Path ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) -Destination ($Destination + $NewFileName) -ErrorAction Stop -Credential $Creds
 
     } catch [System.IO.IOException] {
         
@@ -154,7 +156,7 @@ param(
             $NewFileName = $NewFileName.Replace($OriginalFile.Extension.ToString(),[string]::Format("-{0}{1}",(get-date).TimeOfDay.ToString().Replace(".","").Substring(0,8).Replace(":","-"),$OriginalFile.Extension))
             $File | Rename-Item -NewName $NewFileName -ErrorAction Stop
             # Try to move the item
-            Move-Item -Path ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) -Destination ($Destination + $NewFileName) -ErrorAction Stop
+            Move-Item -Path ([string]::Format("{0}\$NewFileName",$OriginalFile.DirectoryName)) -Destination ($Destination + $NewFileName) -ErrorAction Stop -Credential $Creds
 
 
         } catch {
@@ -188,6 +190,9 @@ param(
         updateLogs -Message "$ClientName \ $NewFileName successfully moved to remote" -Level "INFO"
 
     }
+
+    # Finally remove our mapped drive
+    Remove-PSDrive $config.tempDriveLetter
 
 
 }
@@ -227,20 +232,24 @@ param(
 # Simple function to create a folder if it does not exist
 function createFolder() {
 param(
-[parameter(mandatory=$true)][string]$Route
+[parameter(mandatory=$true)][string]$Route,
+[parameter(mandatory=$true)][System.Management.Automation.PSCredential]$Creds
 )
-    # Check if folder exists
-    $FolderCheck = Test-Path -Path $Route
+    # Check if folder exists, need to create mapped drive for passthru of creds to work
+    New-PSDrive -Name Z -PSProvider FileSystem -Root $config.remoteRoot -Credential $Creds
+    $Destination = $config.tempDriveLetter + ":\" + $Route
+    $FolderCheck = Test-Path -Path $Destination
 
     # If it does not then create it
     if ($FolderCheck -eq $false) {
 
-        New-Item -Path $Route -ItemType Directory
-
+        New-Item -Path $Destination -ItemType Directory
+        Remove-PSDrive $config.tempDriveLetter
         return 1
 
     } else {
         
+        Remove-PSDrive $config.tempDriveLetter
         return 0
 
         }

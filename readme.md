@@ -6,9 +6,10 @@ It will copy all files created that day, and not already uploaded, from the spec
 
 ## Setup Checklist
 - [ ] clone repo
-- [ ] edit ConfigSetup.ps1
+- [ ] edit ConfigSetup.ps1 and run
 - [ ] edit ```$ConfigFileLocation``` in serviceDeliveryReports.ps1
 - [ ] edit ```$ConfigFileLocation``` in ServiceReportTransfer.psm1
+- [ ] edit ```$ConfigFileLocation``` in remoteCreds.ps1 and run
 - [ ] OPTIONAL: edit ServiceReportTransfer.ps1 eventlog write
 - [ ] OPTIONAL: edit serviceDeliveryReports.psm1 ```returnFormattedFileName``` function
 
@@ -46,17 +47,25 @@ _Directory where you want to upload files to_
 
 _Used to track failures in each run. Do not edit. Even if you do it'll get overwritten anyway_
 
+**Cred Path**
+
+_Used to specify where you'll save remote credentials to. For more information on this see example 3 in the below technet article:_
+
+https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/export-clixml?view=powershell-6
+
 Then run to generate the config.xml file:
 
 ```PowerShell
 .\configSetup.ps1
 ```
 
-Then update the top of serviceDeliveryReports and ServiceReportTransfer to point to the config file
+Then update the top of serviceDeliveryReports.psm1 and ServiceReportTransfer.ps1 to point to the config file
 
 ```PowerShell
-$ConfigFileLocation = "OH NO"
+$ConfigFileLocation = "Your path goes here"
 ```
+
+Then do the same in remoteCreds.ps1 and run the file. This will prompt you for credentials. These credentials will be used to connect to the remote root and perform file transfers.
 
 Change the event log write in ServiceReportTransfer.ps1 to be accurate to your environment:
 
@@ -117,7 +126,7 @@ For example:
 ---- HelloWorld.txt
 ```
 
-If you want a regular transfer of files, the recommended approach is to setup a scheduled task running as a user with access to both remote and local. A good way to do this is to map the remote as a drive for that user, then make the scheduled task run in that user context.
+If you want a regular transfer of files, the recommended approach is to setup a scheduled task  as a user with access to the report directory, but use remoteCreds to store the remote user credentials. 
 
 Log files are also created in a flat structure of dd-MM-yy under installRoot\Logs:
 ```
